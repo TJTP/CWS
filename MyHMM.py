@@ -1,26 +1,25 @@
 import numpy as np 
 import time
 from math import log
+import MyUtils
+from MyUtils import get_median
 
 #测试集路径
 testSetPath = "./test.txt"
 #模型版本号
 modelVer = "2020-09-20-11_23_01"
+#一个字符可能的四种标签
+labels = MyUtils.labels
 
-labels = ['B', 'E', 'S', 'M'] 
-
+#导入转移矩阵, 发射概率矩阵, 初始概率矩阵
 def import_models():
     a = np.load("./Models/" + modelVer + "-A.npy", allow_pickle=True).item()
-    #print(a)
     b = np.load("./Models/" + modelVer + "-B.npy", allow_pickle=True).item()
     p = np.load("./Models/" + modelVer + "-Pi.npy", allow_pickle=True).item()
     
     return a, b, p
-def get_median(aList):
-    aList.sort()
-    half = len(aList) // 2
-    return (aList[half] + aList[~half]) / 2
 
+#Viterbi算法对句子进行标注
 def viterbi(sentence, A, B, Pi):
     sentenceLength = len(sentence)
     dpTab = [{}] #动态规划表
@@ -37,34 +36,29 @@ def viterbi(sentence, A, B, Pi):
         dpTab[0][label] = dpTab[0].get(label, 0.0) + (Pi[label] + B[label][sentence[0]])
         seqAll[label] = [label]
 
-    
-
     for idx in range(1, sentenceLength):
         dpTab.append({}) #增加一个当前位置字符的各标签概率表
-        seqNow = {}    
+        seqNow = {}  #到当前位置的几种顺序
+
         for curLabel in labels: #idx位置字符可能的状态值
             choices = [] #记录前一字符到当前字符各种标签顺序的概率值
             for prevLabel in labels: #(idx - 1)位置字符的状态值
                 if sentence[idx] not in B[curLabel]: #当前位置字符不在发射概率矩阵中时
-                    emitProb = get_median(list(B[curLabel].values()))
-
+                    emitProb = get_median(list(B[curLabel].values())) #以中位数作为发射概率
                     #print("Median of emitProb of %s: %f"%(curLabel, emitProb))
-
                     B[curLabel][sentence[idx]] = emitProb
                 prob = dpTab[idx - 1][prevLabel] + A[prevLabel][curLabel] + B[curLabel][sentence[idx]]
                 choices.append((prob, prevLabel))
+            
             bestChoice = max(choices)
             dpTab[idx][curLabel] = bestChoice[0]
             seqNow[curLabel] = seqAll[bestChoice[1]] + [curLabel]
         seqAll = seqNow
 
-    #print(dpTab)    
-    #maxProb, label = max([(dpTab[-1][label], label) for label in labels])
-    #path = [max(item, key = item.get) for item in dpTab]
     bestLastLabel = max(dpTab[-1], key=dpTab[-1].get)
-    #print(path)
     return seqAll[bestLastLabel]
 
+#根据标注对句子进行切分
 def seg_sentence(sentence, tags): 
     segSentence = []
     assert(len(sentence) == len(tags))
@@ -93,6 +87,7 @@ def seg_sentence(sentence, tags):
 
     return segSentence
 
+#给定位置和标签列表, 正向地找到最近的切分点
 def seg_substr_f(tags, idx):
     if tags[idx] == 'B' or tags[idx] == 'M':
         end = idx + 1
@@ -105,6 +100,7 @@ def seg_substr_f(tags, idx):
     else: 
         return (idx + 1)
 
+#给定位置和标签列表, 逆向地找到最近的切分点
 def seg_substr_b(tags, idx):
     if tags[idx] == 'E' or tags[idx] == 'M':
         begin = idx - 1
@@ -116,29 +112,26 @@ def seg_substr_b(tags, idx):
     else: 
         return idx 
 
+#对测试集进行划分
 def apply_all():
     A, B, Pi = import_models()
-    
-    #print(A)
-
     testSet = open(testSetPath, encoding="utf-8")
-    sentence = testSet.readline().strip()
+    
     strTime = time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime(int(time.time())))
     outputFile = open("./Results/181220039-H-" + strTime +".txt", "a", encoding="utf-8")
+    sentence = testSet.readline().strip()
     while sentence:
-        #print(sentence)
         sentencePreLabels = viterbi(sentence, A, B, Pi)
-        #print(sentencePreLabels)
         segSentenceList = seg_sentence(sentence, sentencePreLabels)
         segSentenceStr = ''
         for idx in range(len(segSentenceList) - 1):
             segSentenceStr = segSentenceStr + segSentenceList[idx] + ' '
         segSentenceStr = segSentenceStr + segSentenceList[-1] + '\n'
-        #print(segSentenceStr)
+
         outputFile.write(segSentenceStr)
 
         sentence = testSet.readline().strip()
-        #break
+        
     testSet.close()
     outputFile.close()
     

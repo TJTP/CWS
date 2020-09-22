@@ -1,7 +1,7 @@
 *.zip
 *.rar
 *.docx
-util.py
+test.py
 cws.pdf
 ExtraDataSet/
 Models/

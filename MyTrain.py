@@ -1,14 +1,22 @@
 import time
 import numpy as np
 from math import log
+import MyUtils
 
+#训练集路径
 trainSetPath = "./train.txt"
-labels = ['B', 'E', 'S', 'M'] #开始, 结束, 单字, 中间
+#开发集路径
+devSetPath = "./dev.txt"
+#字符的四种标签
+labels = MyUtils.labels
+#记录每个标签在训练集中出现的次数
 labelCnt = {'B':0, 'E': 0, 'S': 0, 'M': 0}
+#记录训练集句子的总数
 lineCnt = 0
+#记录训练集词语的总数
 wordCnt = 0
 
-#HMM的模型
+#HMM的模型包含的3个矩阵
 #转移概率矩阵 {'B':{{'B':{}, 'E':{}, 'S':{}, 'M':{}}}, 'E':{...}, 'S':{...}, 'M':{...}}
 A = {} 
 #发射概率矩阵 {'B':{'我': ..., '爱': ..., '你': ...}, 'E':{...}, 'S':{...}, 'M':{...}}
@@ -16,11 +24,14 @@ B = {}
 #初始状态分布 {'B': 0.0, 'E': 0.0, 'S': 0.0, 'M': 0.0}
 Pi = {} 
 
-#BMM需要的模型
+#BMM的模型包含的字典和窗口大小
 Dic = {}
 windowSize = 0
+
+#训练时记录最长的词语
 maxLenWord = ''
 
+#对HMM模型的3个矩阵进行初始化
 def init_matrix():
     for lb0 in labels:
         A[lb0] = {}
@@ -29,6 +40,7 @@ def init_matrix():
         for lb1 in labels:
             A[lb0][lb1] = 0.0
 
+#根据训练集的划分情况来对其中的字符进行标注
 def tag_word(word):
     tags = []
 
@@ -44,11 +56,14 @@ def tag_word(word):
         tags.append('E')
     return tags
 
+#把词语拆分成字符
 def add_char(word):
     chars = []
     chars.extend(list(word))
     return chars
 
+#将计数转换成概率, HMM中取对数方便在Viterbi方法中概率相乘转换成相加
+#并且可以使得小概率不丢失精度
 def adjust_prob(labelCnt, lineCnt):
     #取对数可以使得后续的概率相乘转换成相加
     for key in Pi:
@@ -56,7 +71,6 @@ def adjust_prob(labelCnt, lineCnt):
             Pi[key] = float("-Inf")
         else:
             Pi[key] = log(Pi[key] / lineCnt)
-
     for key0 in A:
         for key1 in A[key0]:
             if A[key0][key1] == 0.0:
@@ -71,10 +85,10 @@ def adjust_prob(labelCnt, lineCnt):
                 B[key0][key1] = float("-Inf")
             else:
                 B[key0][key1] = log(B[key0][key1] / labelCnt[key0])
-    
     for key in Dic:
         Dic[key] = log(Dic[key] / wordCnt)
 
+#保存模型, 保存为文本文件方便查看, npy文件方便在测试时读取
 def save_models():
     strTime = time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime(int(time.time())))
 
@@ -104,6 +118,7 @@ def save_models():
     np.save("./Models/" + strTime + "-Dic.npy", Dic)
     np.save("./Models/" + strTime + "-WS.npy", windowSize)
 
+#模型训练的过程
 def train_models(dataPath):
     trainSet = open(dataPath, encoding='utf-8')
     #print(lineCnt)
@@ -152,13 +167,12 @@ def train_models(dataPath):
         line = trainSet.readline().strip() #Read next line
     trainSet.close()
 
+#训练, 用到训练集和开发集
 def train():
-    #trainSet_1 = open(trainSetPath, encoding='utf-8')
     init_matrix()
+
     train_models(trainSetPath)
-    train_models("./dev.txt")
-    #learn_from_data("./pku_training.utf8")
-    #learn_from_data("./msr_training.utf8")
+    train_models(devSetPath)
     
     print("Total number of each label: %s"%(labelCnt))
     print("Total number of lines for train: %d"%(lineCnt))
