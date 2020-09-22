@@ -222,28 +222,32 @@ def bimm_enhance(Dic, windowSize, sentence, A, B, Pi):
     fProbSum = bProbSum = 0
 
     for word in fSegSentenceList:
-        if len(word) == 1:
+        if len(word) == 1 and word.isalpha():
             fCurSingle += 1
             fSingleCnt += 1
         else:
             if fCurSingle > fMaxSingle:
                 fMaxSingle = fCurSingle
             fCurSingle = 0
+        if word.encode("UTF-8").isalpha():
+            fProbSum += 60
         if word in Dic:
             fProbSum += Dic[word]
 
     for word in bSegSentenceList:
-        if len(word) == 1:
+        if len(word) == 1 and word.isalpha():
             bCurSingle += 1
             bSingleCnt += 1
         else:
             if bCurSingle > bMaxSingle:
                 bMaxSingle = bCurSingle
             bCurSingle = 0
+        if word.encode("UTF-8").isalpha():
+            bProbSum += 60
         if word in Dic:
             bProbSum += Dic[word]
     
-    weights = [10, 34, 42, 42]
+    weights = [150, 70, 20, 30]
     wcWeight = weights[0] /sum(weights) #分词数量的权重
     scWeight = weights[1] /sum(weights) #单字数量的权重
     msWeight = weights[2] /sum(weights) #最大连续单字数量的权重
