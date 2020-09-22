@@ -5,7 +5,7 @@ from math import log
 #测试集路径
 testSetPath = "./test.txt"
 #模型版本号
-modelVer = "2020-09-20-10_16_55"
+modelVer = "2020-09-20-11_23_01"
 
 labels = ['B', 'E', 'S', 'M'] 
 
@@ -65,7 +65,7 @@ def viterbi(sentence, A, B, Pi):
     #print(path)
     return seqAll[bestLastLabel]
 
-def seg_sentence(sentence, tags): #待完善
+def seg_sentence(sentence, tags): 
     segSentence = []
     assert(len(sentence) == len(tags))
     if tags[-1] != 'S' and tags[-1] != 'E':
@@ -92,6 +92,29 @@ def seg_sentence(sentence, tags): #待完善
             idx += 1
 
     return segSentence
+
+def seg_substr_f(tags, idx):
+    if tags[idx] == 'B' or tags[idx] == 'M':
+        end = idx + 1
+        while end < len(tags):
+            if tags[end] == 'E':
+                end += 1
+                return end
+            end += 1
+        return end
+    else: 
+        return (idx + 1)
+
+def seg_substr_b(tags, idx):
+    if tags[idx] == 'E' or tags[idx] == 'M':
+        begin = idx - 1
+        while begin >= 0:
+            if tags[begin] == 'B':
+                return begin
+            begin -= 1
+        return (begin + 1)
+    else: 
+        return idx 
 
 def apply_all():
     A, B, Pi = import_models()
