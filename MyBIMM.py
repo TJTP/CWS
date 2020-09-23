@@ -247,7 +247,7 @@ def bimm_enhance(Dic, windowSize, sentence, A, B, Pi):
         if word in Dic:
             bProbSum += Dic[word]
     
-    weights = [150, 70, 20, 30]
+    weights = [100, 70, 20, 30]
     wcWeight = weights[0] /sum(weights) #分词数量的权重
     scWeight = weights[1] /sum(weights) #单字数量的权重
     msWeight = weights[2] /sum(weights) #最大连续单字数量的权重
